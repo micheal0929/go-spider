@@ -1,12 +1,27 @@
 package view
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/anaskhan96/soup"
+	elasticsearch "github.com/elastic/go-elasticsearch/v7"
+	"github.com/elastic/go-elasticsearch/v7/esapi"
 	"log"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
+)
+
+const (
+	Server     = "100199" //后端开发
+	MoveClient = "100299" //移动开发
+	Test       = "100399" //测试
+	Support    = "100499" //运维、技术支持
+	PageClient = "100999" //前端开发
+	AI         = "101399" //人工智能
 )
 
 type soupHeader map[string]string
@@ -17,12 +32,43 @@ type SalarySpider struct {
 	urlPrefix string
 	urlBase   string
 	lastCity  string
+	lastJob   string
 	cities    map[string]string
+	esClient  *elasticsearch.Client
+	counter   int64
 }
 
+type Job struct {
+	JobType   string `json:"job_type"`   //岗位类型
+	City      string `json:"city"`       //城市
+	Company   string `json:"company"`    //公司名称
+	JobName   string `json:"job_name"`   //职位名称
+	Salary    string `json:"salary"`     //薪水范围
+	SalaryBot int    `json:"salary_bot"` //最低
+	SalaryTop int    `json:"salary_top"` //最高
+	Desc      string `json:"desc"`       //职位描述
+	Exp       string `json:"exp"`        //所需经验
+	Link      string `json:"link"`       //职位连接
+}
+
+var TargetJobs map[string]string
+
+func init() {
+	TargetJobs = make(map[string]string)
+	//TargetJobs["后端开发"] = Server
+	//TargetJobs["移动开发"] = MoveClient
+	TargetJobs["测试"] = Test
+	TargetJobs["运维"] = Support
+	//TargetJobs["前端开发"] = PageClient
+	TargetJobs["人工智能"] = AI
+}
 func NewPIGSpider(header soupHeader) *SalarySpider {
 	ret := &SalarySpider{}
 	ret.cities = make(map[string]string)
+	config := elasticsearch.Config{
+		Addresses: []string{"http://127.0.0.1:9200"},
+	}
+	ret.esClient, _ = elasticsearch.NewClient(config)
 	soup.Headers = header
 	return ret
 }
@@ -39,15 +85,24 @@ func (pSp *SalarySpider) SetPrefix(url string) {
 }
 
 func (pSp *SalarySpider) replaceCity(city string) {
-	strings.ReplaceAll(pSp.urlBase, pSp.lastCity, city)
+	pSp.urlBase = strings.ReplaceAll(pSp.urlBase, pSp.lastCity, city)
+
 	if len(pSp.pageQueue) == 0 {
 		pSp.pageQueue = append(pSp.pageQueue, pSp.urlBase)
 	}
 }
 
+func (pSp *SalarySpider) replaceJob(job string) {
+	pSp.urlBase = strings.Replace(pSp.urlBase, pSp.lastJob, job, 1)
+	if len(pSp.pageQueue) == 0 {
+		pSp.pageQueue = append(pSp.pageQueue, pSp.urlBase)
+	}
+	fmt.Println(pSp.urlBase)
+}
+
 func (pSp *SalarySpider) reset() {
 	pSp.pageIndex = 0
-	pSp.pageQueue = pSp.pageQueue[:]
+	pSp.pageQueue = make([]string, 0)
 }
 func (pSp *SalarySpider) parseAllCity() {
 	rsp, err := soup.Get(pSp.pageQueue[pSp.pageIndex])
@@ -68,9 +123,8 @@ func (pSp *SalarySpider) parseAllCity() {
 	//	fmt.Println(k, v)
 	//}
 }
-func (pSp *SalarySpider) parseOnePage() bool {
+func (pSp *SalarySpider) parseOnePage(city, jobType string) bool {
 	if pSp.pageIndex < len(pSp.pageQueue) {
-		fmt.Printf("page %d \n", pSp.pageIndex+1)
 		rsp, err := soup.Get(pSp.pageQueue[pSp.pageIndex])
 		if err != nil {
 			log.Printf("get page : %s, err : %s", pSp.pageQueue[pSp.pageIndex], err)
@@ -79,12 +133,61 @@ func (pSp *SalarySpider) parseOnePage() bool {
 		allContents := doc.FindAll("div", "class", "info-primary")
 		for i := 0; i < len(allContents); i++ {
 			jobName := allContents[i].Find("div", "class", "job-title").Find("a")
+			if strings.Index(jobName.Text(), "实习") != -1 {
+				continue
+			}
 			companyName := allContents[i].Find("div", "class", "company-text").Find("a")
 			salary := allContents[i].Find("span", "class", "red")
 			exp := allContents[i].Find("p")
-			fmt.Println(companyName.Text(), "-", jobName.Text(), ":", salary.Text(), ":", exp.Text())
+			endPos := strings.Index(salary.Text(), "K")
+			if endPos == -1 {
+				continue
+			}
+			array := strings.Split(salary.Text()[:endPos], "-")
+			saBot, _ := strconv.Atoi(array[0])
+			saTop, _ := strconv.Atoi(array[1])
+
+			tags := doc.Find("div", "class", "tags").FindAll("span", "class", "tag-item")
+			descStr := make([]string, len(tags))
+			for i := 0; i < len(tags); i++ {
+				descStr[i] = tags[i].Text()
+			}
+			job := Job{
+				JobType:   jobType,
+				City:      city,
+				Company:   companyName.Text(),
+				JobName:   jobName.Text(),
+				Salary:    salary.Text(),
+				Exp:       exp.Text(),
+				SalaryBot: saBot,
+				SalaryTop: saTop,
+				Desc:      strings.Join(descStr, " "),
+				Link:      pSp.urlPrefix + jobName.Attrs()["href"],
+			}
+			data, _ := json.Marshal(&job)
+			fmt.Println(string(data))
+			req := esapi.CreateRequest{
+				Index:        "job",
+				DocumentType: "job_salary",
+				DocumentID:   strconv.Itoa(int(pSp.counter)),
+				Body:         bytes.NewReader(data),
+			}
+			res, err := req.Do(context.Background(), pSp.esClient)
+			if err != nil {
+				log.Println(err)
+			}
+			atomic.AddInt64(&pSp.counter, 1)
+			defer res.Body.Close()
+
+			//pSp.esClient
+			//fmt.Println(city, ",", companyName.Text(), ",", jobName.Text(), ",", salary.Text(), ",", exp.Text())
 		}
-		aLinks := doc.Find("div", "class", "page").FindAll("a")
+		pageExist := doc.Find("div", "class", "page")
+		if pageExist.Pointer == nil {
+			pSp.pageIndex++
+			return true
+		}
+		aLinks := pageExist.FindAll("a")
 		maxIndex := 0
 		for i := 0; i < len(aLinks); i++ {
 			index, _ := strconv.Atoi(aLinks[i].Text())
@@ -104,24 +207,44 @@ func (pSp *SalarySpider) parseOnePage() bool {
 }
 
 func (pSp *SalarySpider) Start() {
+	pSp.lastCity = "101280100"
+	pSp.lastJob = Server
 	log.Println("start scrap!..")
 	pSp.parseAllCity()
-	for {
-		for key, value := range pSp.cities {
-			pSp.replaceCity(key)
-			fmt.Printf("city : %s\n", value)
+	for jName, value := range TargetJobs {
+		pSp.reset()
+		pSp.replaceJob(value)
+		for {
+			ret := pSp.parseOnePage("广州", jName)
+			if !ret {
+				break
+			}
+			<-time.After(time.Millisecond * 800)
+		}
+		pSp.lastJob = value
+	}
+
+	for jName, value := range TargetJobs {
+		pSp.reset()
+		pSp.replaceJob(value)
+		for key, val := range pSp.cities {
+			pSp.reset()
+
+			if key != pSp.lastCity {
+				pSp.replaceCity(key)
+			}
 			for {
-				ret := pSp.parseOnePage()
+				ret := pSp.parseOnePage(val, jName)
 				if !ret {
 					break
 				}
-				time.After(time.Microsecond * 100)
+				<-time.After(time.Millisecond * 800)
 			}
-			pSp.reset()
 			pSp.lastCity = key
 		}
-
+		pSp.lastJob = value
 	}
+
 	log.Println("scrap over!")
 
 }
