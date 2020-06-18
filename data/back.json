@@ -1,0 +1,82 @@
+[
+    {
+        "id": "100123",
+        "position": "全栈工程师"
+    },
+    {
+        "id": "100124",
+        "position": "GIS工程师"
+    },
+    {
+        "id": "100199",
+        "position": "后端开发"
+    },
+    {
+        "id": "100101",
+        "position": "Java"
+    },
+    {
+        "id": "100102",
+        "position": "C++"
+    },
+    {
+        "id": "100103",
+        "position": "PHP"
+    },
+    {
+        "id": "100105",
+        "position": "C"
+    },
+    {
+        "id": "100106",
+        "position": "C#"
+    },
+    {
+        "id": "100107",
+        "position": ".NET"
+    },
+    {
+        "id": "100108",
+        "position": "Hadoop"
+    },
+    {
+        "id": "100109",
+        "position": "Python"
+    },
+    {
+        "id": "100110",
+        "position": "Delphi"
+    },
+    {
+        "id": "100111",
+        "position": "VB"
+    },
+    {
+        "id": "100112",
+        "position": "Perl"
+    },
+    {
+        "id": "100113",
+        "position": "Ruby"
+    },
+    {
+        "id": "100114",
+        "position": "Node.js"
+    },
+    {
+        "id": "100116",
+        "position": "Golang"
+    },
+    {
+        "id": "100119",
+        "position": "Erlang"
+    },
+    {
+        "id": "100121",
+        "position": "语音"
+    },
+    {
+        "id": "100122",
+        "position": "数据采集"
+    }
+]

@@ -1,0 +1,46 @@
+[
+    {
+        "id": "100211",
+        "position": "UE4"
+    },
+    {
+        "id": "100299",
+        "position": "移动开发"
+    },
+    {
+        "id": "100201",
+        "position": "HTML5"
+    },
+    {
+        "id": "100202",
+        "position": "Android"
+    },
+    {
+        "id": "100203",
+        "position": "IOS"
+    },
+    {
+        "id": "100204",
+        "position": "WP"
+    },
+    {
+        "id": "100205",
+        "position": "移动Web"
+    },
+    {
+        "id": "100206",
+        "position": "Flash开发"
+    },
+    {
+        "id": "100208",
+        "position": "JavaScript"
+    },
+    {
+        "id": "100209",
+        "position": "U3D"
+    },
+    {
+        "id": "100210",
+        "position": "COCOS2DX"
+    }
+]
