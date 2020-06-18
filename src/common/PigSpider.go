@@ -10,6 +10,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v7/esapi"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -289,7 +290,7 @@ func (pSp *SalarySpider) Start() {
 	log.Println("start scrap!..")
 	pSp.parseAllCity()
 
-
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for _, value := range Data {
 		pSp.reset()
 		pSp.replaceJob(value.Id)
@@ -303,7 +304,7 @@ func (pSp *SalarySpider) Start() {
 					fmt.Printf("page : %s, count : %d\n", pSp.urlBase, pSp.pageIndex)
 					break
 				}
-				<-time.After(time.Millisecond * 1000)
+				<-time.After(time.Millisecond * time.Duration(r.Intn(500) + 800))
 			}
 		}
 	}
