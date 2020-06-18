@@ -102,7 +102,7 @@ func init() {
 	}
 
 	rootPath := os.Args[1]
-	fileList := []string{"back.json", "mobile.json", "ai.json", "data.json", "support.json", "web_service.json"}
+	fileList := []string{"back.json", "mobile.json", "ai.json", "data.json", "support.json", "spider.json"}
 	for i :=0;i<len(fileList);i++ {
 		fileName := rootPath + "/" + fileList[i]
 		data, err := ioutil.ReadFile(fileName)

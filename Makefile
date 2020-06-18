@@ -5,9 +5,10 @@ BUILD_BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
 GO_VERSION=$(shell go version)
 BUILD_PATH=$(shell pwd)
 WHO=$(shell git config user.name)
-# LDFLAGS=-ldflags "-X 'common/version.BuildTime=$(BUILD_TIME)' -X 'common/version.BuildVersion=$(BUILD_VERSION)' -X 'common/version.BuildBranch=$(BUILD_BRANCH)' -X 'common/version.BuildName=$(WHO)' -X 'common/version.BuildPath=$(BUILD_PWD)' -X 'common/version.GoVersion=$(GO_VERSION)'"
-FABBUILD := GOOS=linux GOARCH=amd64 CGO_ENABLE=0 go build
-LOCALBUILD := go build
+LDPATH="go_spider/src/common/version"
+LDFLAGS=-ldflags "-X '$(LDPATH).BuildTime=$(BUILD_TIME)' -X '$(LDPATH).BuildVersion=$(BUILD_VERSION)' -X '$(LDPATH).BuildBranch=$(BUILD_BRANCH)' -X '$(LDPATH).BuildName=$(WHO)' -X '$(LDPATH).BuildPath=$(BUILD_PATH)' -X '$(LDPATH).GoVersion=$(GO_VERSION)'"
+FABBUILD := GOOS=linux GOARCH=amd64 CGO_ENABLE=0 go build $(LDFLAGS)
+LOCALBUILD := go build $(LDFLAGS)
 SSHKEY="~/Downloads/tmp"
 all: $(ALL)
 	@echo "build $@ over!"
