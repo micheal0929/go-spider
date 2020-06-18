@@ -3,129 +3,121 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	_ "go_spider/src/common/version"
+
+	"go_spider/src/common"
 	"io/ioutil"
+	"log"
 	"net/http"
-	"strconv"
+	"net/url"
+	"os"
 	"strings"
+	"time"
 )
 
-type workRsp struct {
-	City string `json:"city"`
-	Company string `json:"company"`
-	Exp string `json:"exp"`
-	Link string `json:"link"`
-	JobName string `json:"job_name"`
-	Salary string `json:"salary"`
-}
-type MsgRsp struct {
-	Data []*workRsp `json:"data"`
-}
-
-type workReq struct {
-	City      string `json:"city"`
-	Company   string `json:"company"`
-	Job       string `json:"job"`
-	Desc      string `json:"desc"`
-	SalaryBot int    `json:"salary_bot"`
-	SalaryTop int    `json:"salary_top"`
-}
-
-type elkType struct {
-	Query string `json:"query"`
-}
-type ColData struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-}
-type elkData struct {
-	Columns []ColData `json:"columns"`
-	Rows [][]interface{} `json:"rows"`
-}
 const (
-	workSql = "SELECT city, company, exp, link, salary, job_name from job where %s"
+	Url = "https://www.zhipin.com/c101280100-p100199/?ka=sel-city-101280100"
+	TestUrl = "http://12"
 )
-var ColName []string
-func main() {
 
-	ColName = append(ColName, []string{"city", "company", "exp", "link", "salary"}...)
-	http.HandleFunc("/work", WorkQuery)
-
-	if err := http.ListenAndServe(":9091", nil); err != nil {
-		fmt.Println("start err ", err)
-	}
+var Data []FileData
+type FileData struct {
+	Position string `json:"position"`
+	Id string `json:"id"`
 }
 
-func WorkQuery(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Add("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("content-type", "application/json")
-	byteData, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		fmt.Println("err :", err)
-	}
-	req := workReq{}
-	err = json.Unmarshal(byteData, &req)
-	if err != nil {
-		fmt.Println("err : ", err)
-	}
-	fmt.Println(req)
-	retStr := make([]string, 0)
-	if req.City != "" {
-		retStr = append(retStr, "city = '" + req.City+ "'")
-	}
-	if req.Company != "" {
-		retStr = append(retStr, "company = '" + req.Company+ "'")
-	}
-	if req.Desc != "" {
-		retStr = append(retStr, "desc = '" + req.Desc+ "'")
-	}
-	if req.Job != "" {
-		retStr = append(retStr, "job_type = '" + req.Job+ "'")
-	}
-	if req.SalaryBot != 0 {
-		retStr = append(retStr, "salary_bot >='" + strconv.Itoa(req.SalaryBot) + "'")
-	}
-	if req.SalaryTop != 0 {
-		retStr = append(retStr, "salary_bot <= '" + strconv.Itoa(req.SalaryTop) + "'")
+func init() {
+	if len(os.Args) < 2 {
+		log.Println("need json path")
+		os.Exit(1)
 	}
 
-	sql := fmt.Sprintf(workSql, strings.Join(retStr, " and "))
-	fmt.Println(sql)
-	secReq := elkType{}
-	secReq.Query = sql
-	data, _ := json.Marshal(secReq)
-	resp, err := http.Post("http://127.0.0.1:9200/_xpack/sql", "application/json", strings.NewReader(string(data)))
-	if err != nil {
-		fmt.Println("err :", err)
-	}
-	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	respData := elkData{}
+	rootPath := os.Args[1]
+	fileList := []string{"back.json", "mobile.json", "ai.json", "data.json", "support.json", "spider.json"}
+	for i :=0;i<len(fileList);i++ {
+		fileName := rootPath + "/" + fileList[i]
+		data, err := ioutil.ReadFile(fileName)
+		if err != nil {
+			log.Println("err", err)
+		}
+		tmp := make([]FileData, 0)
+		err = json.Unmarshal(data, &tmp)
+		if err != nil {
+			log.Println("err", err)
+		}
+		Data = append(Data, tmp...)
 
-	err = json.Unmarshal(body, &respData)
-	if err != nil {
-		fmt.Println("err :", err)
 	}
-
-	//for _, col := range respData.Columns {
-	//	fmt.Println(col.Name, col.Type)
+}
+func main() {
 	//
+	spider := common.NewPIGSpider(map[string]string{
+
+		"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36",
+	})
+	//cookis := http.Cookie{
+	//	Path:       "=/",
+	//	Domain:     "ynuf.aliapp.org",
+	//	MaxAge:     31536000,
+	//	Secure:     true,
+	//	HttpOnly:   false,
+	//	Raw:        "umdata_=G144FFA470A5CCBC3E41D6FB981C84C645C29A1",
+	//	Unparsed:   nil,
 	//}
 	//
-	rsp := MsgRsp{}
+	//
+	////web_service.SetPrefix("https://www.zhipin.com")
+	//web_service.SetCookie(&cookis)
+	spider.Start()
+	//
 
-	for _, col := range respData.Rows {
-		tmp := workRsp{}
-		tmp.City = col[0].(string)
-		tmp.Company = col[1].(string)
-		tmp.Exp = col[2].(string)
-		tmp.Link = col[3].(string)
-		tmp.Salary = col[4].(string)
-		tmp.JobName = col[5].(string)
-
-		rsp.Data = append(rsp.Data, &tmp)
-	}
-	//rsp.Data = "hello"
-	send, _ := json.Marshal(rsp)
-	w.Write(send)
 }
+
+func ProxyTest() {
+	proxyAddr := "http://157.255.144.77:80"
+
+	httpUrl := "http://127.0.0.1:9091/spider"
+
+	poststr := ""
+
+	proxy, err := url.Parse(proxyAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	netTransport := &http.Transport{
+		Proxy:                 http.ProxyURL(proxy),
+		MaxIdleConnsPerHost:   10,
+		ResponseHeaderTimeout: time.Second * time.Duration(5),
+	}
+
+	httpClient := http.Client{
+		Timeout:   time.Second * 10,
+		Transport: netTransport,
+	}
+
+	res, err := http.NewRequest("POST", httpUrl, strings.NewReader(poststr))
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	res.Header.Add("content-type", "application/x-ndjson")
+	_, err = httpClient.Do(res)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	//
+	//defer resp.Body.Close()
+	//if resp.StatusCode != http.StatusOK {
+	//	log.Println(err)
+	//}
+	//
+	//c, _ := ioutil.ReadAll(resp.Body)
+	//
+	//fmt.Println(string(c))
+}
+
+
+
