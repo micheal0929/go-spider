@@ -26,8 +26,8 @@ spider:
 	@echo "release build $@ over!"
 
 fab_spider:
-	scp -i $(SSHKEY) bin/linux/spider root@122.51.223.225:/root
+	scp -i $(SSHKEY) bin/linux/spider root@myapig.info:/root
 fab_web_service:
-	scp -i $(SSHKEY) bin/linux/web_service root@122.51.223.225:/root
+	scp -i $(SSHKEY) bin/linux/web_service root@myapig.info:/root
 clean:
 	rm -rf bin/*
