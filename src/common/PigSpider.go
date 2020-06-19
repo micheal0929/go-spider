@@ -5,9 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/anaskhan96/soup"
-	elasticsearch "github.com/elastic/go-elasticsearch/v7"
-	"github.com/elastic/go-elasticsearch/v7/esapi"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -17,6 +14,10 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/anaskhan96/soup"
+	elasticsearch "github.com/elastic/go-elasticsearch/v7"
+	"github.com/elastic/go-elasticsearch/v7/esapi"
 )
 
 //大类
@@ -29,24 +30,6 @@ const (
 	AI         = "101399" //人工智能
 )
 
-//细分
-const (
-	//后端
-	FullStack = "100123" //全栈
-	GIS       = "100124" //GIS
-	BackEnd   = "100199" //后端开发
-	Java      = "100101" //Java
-	Cplusplus = "100102" //C++
-	Php       = "100103" //PHP
-	C         = "100105" //C
-	CSharp    = "100106" //C#
-	NET       = "100107" //.Net
-	Hadoop    =  "100108" //Hadoop
-	Python    = "100109"//Python
-	Delphi	="100110" //Delphi
-	VB     = "100111" //VB
-	Perl  = ""
-)
 
 const (
 	JobUrl = "https://www.zhipin.com/job_detail/?query=&city=101280100&industry=&position=100508"
@@ -103,7 +86,7 @@ func init() {
 	}
 
 	rootPath := os.Args[1]
-	fileList := []string{"back.json", "mobile.json", "ai.json", "data.json", "support.json", "spider.json"}
+	fileList := []string{"mobile.json", "ai.json", "data.json", "support.json", "spider.json"}
 	for i :=0;i<len(fileList);i++ {
 		fileName := rootPath + "/" + fileList[i]
 		data, err := ioutil.ReadFile(fileName)
@@ -173,24 +156,23 @@ func (pSp *SalarySpider) reset() {
 	pSp.pageQueue = make([]string, 0)
 }
 func (pSp *SalarySpider) parseAllCity() {
-	//rsp, err := soup.Get(pSp.pageQueue[pSp.pageIndex])
-	//if err != nil {
-	//	log.Printf("get page : %s, err : %s", pSp.pageQueue[pSp.pageIndex], err)
-	//}
-	//doc := soup.HTMLParse(rsp)
-	//aLinks := doc.Find("dd", "class", "city-wrapper").FindAll("a")
-	//for i := 0; i < len(aLinks); i++ {
-	//	cityStr := aLinks[i].Text()
-	//	codeStr := aLinks[i].Attrs()["ka"]
-	//	codes := strings.Split(codeStr, "-")
-	//	if len(codes) > 2 && codes[2] != "100010000" {
-	//		pSp.cities[codes[2]] = cityStr
-	//	}
-	//}
-	pSp.cities["101280100"] = "广州"
-	//for k, v := range pSp.cities {
-	//	fmt.Println(k, v)
-	//}
+	rsp, err := soup.Get(pSp.pageQueue[pSp.pageIndex])
+	if err != nil {
+		log.Printf("get page : %s, err : %s", pSp.pageQueue[pSp.pageIndex], err)
+	}
+	doc := soup.HTMLParse(rsp)
+	aLinks := doc.Find("dd", "class", "city-wrapper").FindAll("a")
+	for i := 0; i < len(aLinks); i++ {
+		cityStr := aLinks[i].Text()
+		codeStr := aLinks[i].Attrs()["ka"]
+		codes := strings.Split(codeStr, "-")
+		if len(codes) > 2 && codes[2] != "100010000" {
+			pSp.cities[codes[2]] = cityStr
+		}
+	}
+	for k, v := range pSp.cities {
+		fmt.Println(k, v)
+	}
 }
 func (pSp *SalarySpider) parseOnePage(city, jobType string) bool {
 	if pSp.pageIndex < len(pSp.pageQueue) {
@@ -248,8 +230,6 @@ func (pSp *SalarySpider) parseOnePage(city, jobType string) bool {
 			atomic.AddInt64(&pSp.counter, 1)
 			defer res.Body.Close()
 
-			//pSp.esClient
-			//fmt.Println(city, ",", companyName.Text(), ",", jobName.Text(), ",", salary.Text(), ",", exp.Text())
 		}
 		pageExist := doc.Find("div", "class", "page")
 		if pageExist.Pointer == nil {
@@ -285,8 +265,6 @@ func (pSp *SalarySpider) SetCookie(cookie *http.Cookie) {
 func (pSp *SalarySpider) Start() {
 	pSp.SetRootUrl(JobUrl)
 	pSp.SetPrefix(Prefix)
-	//pSp.lastCity = "101280100"
-	//pSp.lastJob = Server
 	log.Println("start scrap!..")
 	pSp.parseAllCity()
 
@@ -304,7 +282,7 @@ func (pSp *SalarySpider) Start() {
 					fmt.Printf("page : %s, count : %d\n", pSp.urlBase, pSp.pageIndex)
 					break
 				}
-				<-time.After(time.Millisecond * time.Duration(r.Intn(500) + 800))
+				<-time.After(time.Millisecond * time.Duration(r.Intn(1000) + 1000))
 			}
 		}
 	}

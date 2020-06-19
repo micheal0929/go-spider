@@ -3,9 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	_ "go_spider/src/common/version"
-
-	"go_spider/src/common"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,17 +10,22 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	_ "go_spider/src/common/version"
+
+	"go_spider/src/common"
 )
 
 const (
-	Url = "https://www.zhipin.com/c101280100-p100199/?ka=sel-city-101280100"
+	Url     = "https://www.zhipin.com/c101280100-p100199/?ka=sel-city-101280100"
 	TestUrl = "http://12"
 )
 
 var Data []FileData
+
 type FileData struct {
 	Position string `json:"position"`
-	Id string `json:"id"`
+	Id       string `json:"id"`
 }
 
 func init() {
@@ -34,7 +36,7 @@ func init() {
 
 	rootPath := os.Args[1]
 	fileList := []string{"back.json", "mobile.json", "ai.json", "data.json", "support.json", "spider.json"}
-	for i :=0;i<len(fileList);i++ {
+	for i := 0; i < len(fileList); i++ {
 		fileName := rootPath + "/" + fileList[i]
 		data, err := ioutil.ReadFile(fileName)
 		if err != nil {
@@ -49,8 +51,8 @@ func init() {
 
 	}
 }
+
 func main() {
-	//
 	spider := common.NewPIGSpider(map[string]string{
 
 		"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36",
@@ -69,7 +71,6 @@ func main() {
 	////web_service.SetPrefix("https://www.zhipin.com")
 	//web_service.SetCookie(&cookis)
 	spider.Start()
-	//
 
 }
 
@@ -108,16 +109,5 @@ func ProxyTest() {
 		fmt.Println(err)
 	}
 
-	//
-	//defer resp.Body.Close()
-	//if resp.StatusCode != http.StatusOK {
-	//	log.Println(err)
-	//}
-	//
-	//c, _ := ioutil.ReadAll(resp.Body)
-	//
-	//fmt.Println(string(c))
+
 }
-
-
-
