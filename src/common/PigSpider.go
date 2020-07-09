@@ -5,9 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/anaskhan96/soup"
-	elasticsearch "github.com/elastic/go-elasticsearch/v7"
-	"github.com/elastic/go-elasticsearch/v7/esapi"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -17,6 +14,10 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/anaskhan96/soup"
+	elasticsearch "github.com/elastic/go-elasticsearch/v7"
+	"github.com/elastic/go-elasticsearch/v7/esapi"
 )
 
 //大类
@@ -29,24 +30,6 @@ const (
 	AI         = "101399" //人工智能
 )
 
-//细分
-const (
-	//后端
-	FullStack = "100123" //全栈
-	GIS       = "100124" //GIS
-	BackEnd   = "100199" //后端开发
-	Java      = "100101" //Java
-	Cplusplus = "100102" //C++
-	Php       = "100103" //PHP
-	C         = "100105" //C
-	CSharp    = "100106" //C#
-	NET       = "100107" //.Net
-	Hadoop    = "100108" //Hadoop
-	Python    = "100109" //Python
-	Delphi    = "100110" //Delphi
-	VB        = "100111" //VB
-	Perl      = ""
-)
 
 const (
 	JobUrl = "https://www.zhipin.com/job_detail/?query=&city=101280100&industry=&position=100508"
@@ -62,9 +45,9 @@ type SalarySpider struct {
 	urlBase   string
 	//lastCity  string
 	//lastJob   string
-	cities   map[string]string
-	esClient *elasticsearch.Client
-	counter  int64
+	cities    map[string]string
+	esClient  *elasticsearch.Client
+	counter   int64
 }
 
 type Job struct {
@@ -80,13 +63,15 @@ type Job struct {
 	Link      string `json:"link"`       //职位连接
 }
 
+
 type FileData struct {
 	Position string `json:"position"`
-	Id       string `json:"id"`
+	Id string `json:"id"`
 }
 
 var TargetJobs map[string]string
 var Data []FileData
+
 
 func init() {
 	TargetJobs = make(map[string]string)
@@ -101,8 +86,8 @@ func init() {
 	}
 
 	rootPath := os.Args[1]
-	fileList := []string{"back.json", "mobile.json", "ai.json", "data.json", "support.json", "spider.json"}
-	for i := 0; i < len(fileList); i++ {
+	fileList := []string{"mobile.json", "ai.json", "data.json", "support.json", "spider.json"}
+	for i :=0;i<len(fileList);i++ {
 		fileName := rootPath + "/" + fileList[i]
 		data, err := ioutil.ReadFile(fileName)
 		if err != nil {
@@ -185,7 +170,6 @@ func (pSp *SalarySpider) parseAllCity() {
 			pSp.cities[codes[2]] = cityStr
 		}
 	}
-	// pSp.cities["101280100"] = "广州"
 	for k, v := range pSp.cities {
 		fmt.Println(k, v)
 	}
@@ -246,8 +230,6 @@ func (pSp *SalarySpider) parseOnePage(city, jobType string) bool {
 			atomic.AddInt64(&pSp.counter, 1)
 			defer res.Body.Close()
 
-			//pSp.esClient
-			//fmt.Println(city, ",", companyName.Text(), ",", jobName.Text(), ",", salary.Text(), ",", exp.Text())
 		}
 		pageExist := doc.Find("div", "class", "page")
 		if pageExist.Pointer == nil {
@@ -283,8 +265,6 @@ func (pSp *SalarySpider) SetCookie(cookie *http.Cookie) {
 func (pSp *SalarySpider) Start() {
 	pSp.SetRootUrl(JobUrl)
 	pSp.SetPrefix(Prefix)
-	// pSp.lastCity = "101280100"
-	//pSp.lastJob = Server
 	log.Println("start scrap!..")
 	pSp.parseAllCity()
 
@@ -302,10 +282,11 @@ func (pSp *SalarySpider) Start() {
 					fmt.Printf("page : %s, count : %d\n", pSp.urlBase, pSp.pageIndex)
 					break
 				}
-				<-time.After(time.Millisecond * time.Duration(r.Intn(500)+800))
+				<-time.After(time.Millisecond * time.Duration(r.Intn(1000) + 1000))
 			}
 		}
 	}
 
 	log.Println("scrap over!")
+
 }

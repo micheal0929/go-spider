@@ -12,6 +12,8 @@ import (
 	"time"
 
 	_ "go_spider/src/common/version"
+
+	"go_spider/src/common"
 )
 
 const (
@@ -49,15 +51,12 @@ func init() {
 
 	}
 }
+
 func main() {
-	str1 := "asSASA ddd dsjkdsjs dk"
-	fmt.Println(&str1)
-	// _, _ = &&str1
-	//
-	// spider := common.NewPIGSpider(map[string]string{
-	//
-	// 	"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36",
-	// })
+	spider := common.NewPIGSpider(map[string]string{
+
+		"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36",
+	})
 	//cookis := http.Cookie{
 	//	Path:       "=/",
 	//	Domain:     "ynuf.aliapp.org",
@@ -71,8 +70,7 @@ func main() {
 	//
 	////web_service.SetPrefix("https://www.zhipin.com")
 	//web_service.SetCookie(&cookis)
-	// spider.Start()
-	//
+	spider.Start()
 
 }
 
@@ -111,13 +109,5 @@ func ProxyTest() {
 		fmt.Println(err)
 	}
 
-	//
-	//defer resp.Body.Close()
-	//if resp.StatusCode != http.StatusOK {
-	//	log.Println(err)
-	//}
-	//
-	//c, _ := ioutil.ReadAll(resp.Body)
-	//
-	//fmt.Println(string(c))
+
 }
